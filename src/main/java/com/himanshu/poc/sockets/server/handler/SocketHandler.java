@@ -15,14 +15,10 @@
 */
 package com.himanshu.poc.sockets.server.handler;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.Socket;
-import java.nio.ByteBuffer;
 
 public class SocketHandler extends Thread {
 	private final Socket client_socket;
@@ -48,40 +44,27 @@ public class SocketHandler extends Thread {
 		System.out.println(client_socket);
 		try {
 			System.out.println("reading socket");
-			/*BufferedReader brIn = new BufferedReader(new InputStreamReader(client_socket.getInputStream()));
-			String inputLine = null;
-			while ((inputLine = brIn.readLine()) != null) {
-				System.out.println(inputLine);
-			}*/
 			InputStream is = client_socket.getInputStream();
 			byte[] byteArr = new byte[1024];
-			int inputsize = -1;
-			int currentPos = 0;
-			StringBuffer sb = new StringBuffer(11111);
-			/*while((inputsize = is.read(byteArr)) != -1) {
-				String processed = new String(byteArr);
-				sb.append(processed);
-			}*/
-			int BUFFER_SIZE = 1024;
+			
 			int read;
-			byte[] buffer = new byte[BUFFER_SIZE];
-			String processed = "";
+			int BUFFER_SIZE = 1024;
+			
+			/*Using bytearrayoutputstream here gives me the flexibility to have an auto-increasing byte buffer. 
+			Thus removes the headache of me managing the array, also see how I am writing the bytearray into the output stream.
+			This is done so bcoz the array might contain data upto few bytes but am always reading it upto BUFFER_SIZE, 
+			so can have garbage data. So in order to fix this, while writing into bytearrayoutputstream. I simply use the size
+			returned by is.read, gives me the number of bytes received, so write only that much ignoring the garbage values.*/
+			
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			
+			//Here I am reading from socketinputstream, and filling data in a bytearray of 1024 length.
 			while ((read = is.read(byteArr, 0, BUFFER_SIZE)) != -1) {
-				String current = new String(byteArr);
-				//os.write(buffer, 0, read);
-				System.out.println("current Process   "+current);
-
-				//processed +=current;
-				sb.append(current.toString().trim());
+				//Here I am writing upto the length received from inputstream.read method. So garbage values are lost. What a safe :)
+				baos.write(byteArr, 0, read);	//This is an optimized design, instead of having so many strings
 			}
-			System.out.println("Socket input is : "+sb.toString());
-			System.out.println("Sending response to client  "+processed.toString());
-			//client_socket.getOutputStream().write(sb.toString().getBytes());
-			//client_socket.getOutputStream().close();
-
-			FileOutputStream fos = new FileOutputStream(new File("C:\\Users\\himanshu2100\\eee.txt"));
-			fos.write(processed.getBytes());
-			fos.close();
+			System.out.println("Output is :"+new String(baos.toByteArray()));
+			baos.close();
 			is.close();
 			client_socket.close();
 		} catch (IOException e) {
